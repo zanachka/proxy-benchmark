@@ -19,9 +19,11 @@ SPIDER_MODULES = ['proxybench.spiders']
 SCHEDULER_PRIORITY_QUEUE = 'scrapy.pqueues.DownloaderAwarePriorityQueue'
 DUPEFILTER_CLASS = 'proxybench.dupefilter.ProviderwiseDupeFilter'
 SPIDER_MIDDLEWARES = {'proxybench.middlewares.BanDetectionMiddleware': 950}
-DOWNLOAD_HANDLERS = {
-    'http': 'scrapy_zyte_api.handler.ScrapyZyteAPIDownloadHandler',
-    'https': 'scrapy_zyte_api.handler.ScrapyZyteAPIDownloadHandler',
-}
-TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
+
 ZYTE_API_KEY = PROXY_PROVIDERS.get('zyte_smart_browser')
+if ZYTE_API_KEY:
+    DOWNLOAD_HANDLERS = {
+        'http': 'scrapy_zyte_api.handler.ScrapyZyteAPIDownloadHandler',
+        'https': 'scrapy_zyte_api.handler.ScrapyZyteAPIDownloadHandler',
+    }
+    TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
