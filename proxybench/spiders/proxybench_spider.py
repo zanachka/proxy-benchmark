@@ -25,6 +25,7 @@ class ProxyBenchmarkSpider(scrapy.Spider):
     name = 'proxybench'
     start_url = 'https://www.similarweb.com/top-websites/'
     link_extractor = scrapy.linkextractors.LinkExtractor(allow_domains=[])
+    _latency_total = {}
 
     def start_requests(self):
         for provider, proxy in self.settings['PROXY_PROVIDERS'].items():
@@ -49,6 +50,8 @@ class ProxyBenchmarkSpider(scrapy.Spider):
         proxy = response.meta.get('proxy_str')
         domain_original = get_original_domain(response.request)
         self.increment_counters(provider, domain_original, 'successful')
+        latency = response.meta.get('download_latency')
+        self.increment_latency(provider, domain_original, latency)
 
         for link in self.link_extractor.extract_links(response):
             domain = tldextract.extract(link.url).registered_domain.lower()
@@ -69,3 +72,17 @@ class ProxyBenchmarkSpider(scrapy.Spider):
     def get_counter(self, provider, domain, counter):
         stats = self.crawler.stats
         return stats.get_value(f'proxybench/{provider}/{domain}/{counter}', 0)
+
+    def increment_latency(self, provider, domain, value):
+        d = self._latency_total
+        d[f'proxybench/{provider}'] = d.setdefault(f'proxybench/{provider}', 0) + value
+        d[f'proxybench/{provider}/{domain}'] = d.setdefault(f'proxybench/{provider}/{domain}', 0) + value
+
+    def calculate_latency_avg(self):
+        stats = self.crawler.stats
+        for key, latency_total in self._latency_total.items():
+            response_cnt = stats.get_value(f'{key}/successful', 1)
+            stats.set_value(f'{key}/latency_avg', latency_total/response_cnt)
+
+    def closed(self, reason):
+        self.calculate_latency_avg()
