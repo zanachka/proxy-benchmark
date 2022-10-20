@@ -1,5 +1,6 @@
 import scrapy
 import tldextract
+import pandas
 
 
 def patch_request(request, provider, proxy):
@@ -28,10 +29,18 @@ class ProxyBenchmarkSpider(scrapy.Spider):
     _latency_total = {}
 
     def start_requests(self):
-        for provider, proxy in self.settings['PROXY_PROVIDERS'].items():
-            request = scrapy.Request(self.start_url, self.parse_start_url)
-            patch_request(request, provider, proxy)
-            yield request
+        if getattr(self, 'links_csv', None):
+            for provider, proxy in self.settings['PROXY_PROVIDERS'].items():
+                self.links = list(pandas.read_csv(self.links_csv)['Links'])
+                for link in self.links:
+                    request = scrapy.Request(link, self.parse)
+                    patch_request(request, provider, proxy)
+                    yield request
+        else:
+            for provider, proxy in self.settings['PROXY_PROVIDERS'].items():
+                request = scrapy.Request(self.start_url, self.parse_start_url)
+                patch_request(request, provider, proxy)
+                yield request
 
     def parse_start_url(self, response):
         provider = response.meta['provider']
@@ -53,16 +62,17 @@ class ProxyBenchmarkSpider(scrapy.Spider):
         latency = response.meta.get('download_latency')
         self.increment_latency(provider, domain_original, latency)
 
-        for link in self.link_extractor.extract_links(response):
-            domain = tldextract.extract(link.url).registered_domain.lower()
-            total = self.get_counter(provider, domain, 'total')
+        if not getattr(self, 'links', None):
+            for link in self.link_extractor.extract_links(response):
+                domain = tldextract.extract(link.url).registered_domain.lower()
+                total = self.get_counter(provider, domain, 'total')
 
-            if total < self.settings['REQUESTS_PER_DOMAIN']:
-                request = scrapy.Request(link.url)
+                if total < self.settings['REQUESTS_PER_DOMAIN']:
+                    request = scrapy.Request(link.url)
 
-                self.increment_counters(provider, domain, 'total')
-                patch_request(request, provider, proxy)
-                yield request
+                    self.increment_counters(provider, domain, 'total')
+                    patch_request(request, provider, proxy)
+                    yield request
 
     def increment_counters(self, provider, domain, counter):
         stats = self.crawler.stats

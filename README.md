@@ -1,7 +1,11 @@
 # Open Source Proxy Benchmarking Tool
 Open source proxy benchmarking tool that anyone can run to get accurate, transparent performance results. 
 It is a [Scrapy](https://scrapy.org/) spider that crawls [Similarweb Top 50 websites](https://www.similarweb.com/top-websites/) with 
-up to 1,000 URLs per website (maximum 50,000 URLs) and reports the results per proxy provider.
+up to 1,000 URLs per website (maximum 50,000 URLs) and reports the results per proxy provider. 
+
+Alternatively, you can also supply a custom CSV with your own URLs to the spider. 
+
+If you choose to run the spider this way, the spider will only follow the URLs in the CSV, and will not follow any links inside them (unlike the default method).
 
 ## QuickStart
 
@@ -33,6 +37,13 @@ PROXY_PROVIDERS = {
 ```
 scrapy crawl proxybench
 ```
+This will run the spider normally and crawl [Similarweb Top 50 websites](https://www.similarweb.com/top-websites/).
+
+However, if you wish to crawl a custom list of URLs, you can use the links_csv argument as such:
+```
+scrapy crawl proxybench -a links_csv=C:/foo/bar/links.csv
+```
+The links CSV needs to have a column named "Links". 
 
 4. **Check the results in the `log.txt` file**
 
